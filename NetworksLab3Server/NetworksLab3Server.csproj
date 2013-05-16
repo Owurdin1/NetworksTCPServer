@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="Classes\ResponseBuilder.cs" />
     <Compile Include="Classes\ServerRun.cs" />
+    <Compile Include="Classes\SocketState.cs" />
     <Compile Include="Classes\TestCode.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>

@@ -14,6 +14,9 @@ namespace NetworksLab3Server.Classes
     { 
         private Socket _serverSocket; 
         private int _port; 
+        private Thread _acceptThread; 
+        private List<ConnectionInfo> _connections = new List<ConnectionInfo>(); 
+
         public ThreadedServer(int port) 
         { 
             _port = port; 
@@ -25,8 +28,6 @@ namespace NetworksLab3Server.Classes
             public Thread Thread; 
         } 
         
-        private Thread _acceptThread; 
-        private List<ConnectionInfo> _connections = new List<ConnectionInfo>(); 
 
         public void Start() 
         { 
@@ -80,6 +81,7 @@ namespace NetworksLab3Server.Classes
                     { 
                         lock (_connections) 
                         { 
+                            // this is just the echo server code....
                             foreach (ConnectionInfo conn in _connections) 
                             { 
                                 if (conn != connection) 
