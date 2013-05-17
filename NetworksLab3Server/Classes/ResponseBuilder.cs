@@ -30,16 +30,26 @@ namespace NetworksLab3Server.Classes
             }
         }
 
-        public byte[] Response(int count)
+        /// <summary>
+        /// Builds response message and prepares byte array
+        /// </summary>
+        /// <param name="count">
+        /// integer value that is a unique value to append to messages
+        /// </param>
+        /// <returns>
+        /// formatted byte array
+        /// </returns>
+        public byte[] Response(int count, string msTimeStamp, 
+            string foreignHostIP, string serverSocketNumber, string serverIPAddress)
         {
             byte[] msgByte = null;
 
             msgArray[0] = "RSP";
-            msgArray[1] = "msTimeStamp"; // TODO Generate timestamp for server
-            msgArray[5] = "foreignHostIP"; // TODO Get ForeignHostIP From socket
-            msgArray[7] = "serverSocketNumber"; // TODO Get socket number from server
-            msgArray[8] = "serverIPAddress"; // TODO Get server IP Address
-            msgArray[10] = "WurdingerO" + count.ToString(); // TODO get a count number for number of messages
+            msgArray[1] = msTimeStamp;
+            msgArray[5] = foreignHostIP;
+            msgArray[7] = serverSocketNumber;
+            msgArray[8] = serverIPAddress;
+            msgArray[10] = "OW " + count.ToString();
 
             string message = String.Empty;
             foreach (string s in msgArray)

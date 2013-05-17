@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Net.Sockets;
-//using System.Net.NetworkInformation;
 using System.Net;
 
 namespace NetworksLab3Server.Classes
@@ -19,8 +18,8 @@ namespace NetworksLab3Server.Classes
         // class private global variables
         private Socket sock = null;
         private int socketNumber;
-        //private List<SocketState> sockList = new List<SocketState>();
         private Thread acceptThread;
+        private string localServerIP = string.Empty;
 
         // class properties
         public Socket Sock
@@ -42,6 +41,7 @@ namespace NetworksLab3Server.Classes
         public string Start()
         //public void Start()
         {
+            // start socket and begin listening
             string results = SetSock();
             acceptThread = new Thread(AcceptConnections);
             acceptThread.IsBackground = true;
@@ -78,12 +78,12 @@ namespace NetworksLab3Server.Classes
                 Socket socket = sock.Accept();
                 SocketState sockState = new SocketState();
                 sockState.sock = socket;
+                sockState.stpWatch.Start();
 
                 // Spawns thread and starts ConnectionHandler function
                 sockState.thread = new Thread(ConnectionHandler);
                 sockState.thread.IsBackground = true;
                 sockState.thread.Start(sockState);
-                //lock (sockList) sockList.Add(sockState);
             }
         }
 
@@ -112,6 +112,7 @@ namespace NetworksLab3Server.Classes
             // Get local machine information
             IPHostEntry localIP = Dns.GetHostEntry(Dns.GetHostName());
             IPEndPoint localEndPoint = new IPEndPoint(localIP.AddressList[WIRELESS_NIC_INDEX], PORT);
+            localServerIP = localEndPoint.ToString().Split(':')[0];
 
             // set up socket
             sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -119,7 +120,7 @@ namespace NetworksLab3Server.Classes
             sock.Listen((int)SocketOptionName.MaxConnections);
 
             // test code to be removed
-            results = "Have created a socket and it is listening!";
+            results = "Have created a socket and it is listening! serverIP = " + localServerIP;
             socketNumber = (int)sock.Handle;
 
             return results;
@@ -162,8 +163,13 @@ namespace NetworksLab3Server.Classes
                 if (bytesRead > 0)
                 {
                     // Process the incoming message and prepares it for response
+                    sockState.countNumber++;
                     ResponseBuilder rb = new ResponseBuilder(System.Text.Encoding.ASCII.GetString(buffer));
-                    processedBuffer = rb.Response((int)sockState.sock.Handle);
+                    processedBuffer = rb.Response(sockState.countNumber, 
+                        sockState.stpWatch.ElapsedMilliseconds.ToString(), 
+                        sockState.sock.RemoteEndPoint.ToString(), 
+                        sockState.sock.Handle.ToString(), 
+                        localServerIP);
 
                     lock (sockState)
                     {
