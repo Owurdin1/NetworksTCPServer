@@ -46,10 +46,11 @@ namespace NetworksLab3Server.Classes
 
             msgArray[0] = "RSP";
             msgArray[1] = msTimeStamp;
-            msgArray[5] = foreignHostIP;
-            msgArray[7] = serverSocketNumber;
-            msgArray[8] = serverIPAddress;
-            msgArray[10] = "OW " + count.ToString();
+            msgArray[6] = foreignHostIP;
+            msgArray[7] = "2605";
+            msgArray[8] = serverSocketNumber;
+            msgArray[9] = serverIPAddress;
+            msgArray[11] = "OW " + count.ToString();
 
             string message = String.Empty;
             foreach (string s in msgArray)

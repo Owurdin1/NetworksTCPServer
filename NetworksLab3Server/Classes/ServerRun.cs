@@ -11,7 +11,7 @@ namespace NetworksLab3Server.Classes
     class ServerRun
     {
         // class global Constant variables
-        private const int WIRELESS_NIC_INDEX = 1; //2;
+        private const int WIRELESS_NIC_INDEX = 3; //1; //2;
         private const int PORT = 2605;
         private const int BUFFER_SIZE = 256;
 
@@ -162,12 +162,16 @@ namespace NetworksLab3Server.Classes
 
                 if (bytesRead > 0)
                 {
+                    // Truncate message so not to send too much data back.
+                    byte[] choppedBuffer = new byte[bytesRead];
+                    Array.Copy(buffer, choppedBuffer, bytesRead);
+
                     // Process the incoming message and prepares it for response
                     sockState.countNumber++;
-                    ResponseBuilder rb = new ResponseBuilder(System.Text.Encoding.ASCII.GetString(buffer));
+                    ResponseBuilder rb = new ResponseBuilder(System.Text.Encoding.ASCII.GetString(choppedBuffer));
                     processedBuffer = rb.Response(sockState.countNumber, 
                         sockState.stpWatch.ElapsedMilliseconds.ToString(), 
-                        sockState.sock.RemoteEndPoint.ToString(), 
+                        sockState.sock.RemoteEndPoint.AddressFamily.ToString(), //ToString().Split(':')[0], 
                         sockState.sock.Handle.ToString(), 
                         localServerIP);
 
