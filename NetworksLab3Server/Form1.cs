@@ -22,7 +22,7 @@ namespace NetworksLab3Server
         private void startButton_Click(object sender, EventArgs e)
         {
             // TODO: create server and begin listening
-            sr = new Classes.ServerRun();
+            sr = new Classes.ServerRun(richTextBox);
             string nicTest = sr.Start();
 
             richTextBox.Text = nicTest;

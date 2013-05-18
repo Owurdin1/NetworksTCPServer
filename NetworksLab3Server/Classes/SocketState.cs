@@ -11,11 +11,12 @@ namespace NetworksLab3Server.Classes
 {
     class SocketState
     {
+        // Public values to store for use in threads
         public Socket sock = null;
         public Thread thread = null;
         public Stopwatch stpWatch;
         public int countNumber = 0;
-
+        
         public SocketState()
         {
             stpWatch = new Stopwatch();

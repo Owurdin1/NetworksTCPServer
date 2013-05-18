@@ -14,12 +14,16 @@ namespace NetworksLab3Server.Classes
         private const int WIRELESS_NIC_INDEX = 3; //1; //2;
         private const int PORT = 2605;
         private const int BUFFER_SIZE = 256;
+        private const int LENGTH_BITS = 2;
 
         // class private global variables
         private Socket sock = null;
         private int socketNumber;
         private Thread acceptThread;
         private string localServerIP = string.Empty;
+        private Object receiveLock = new Object();
+        private Object sendLock = new Object();
+        private System.Windows.Forms.RichTextBox formTextBox = null;
 
         // class properties
         public Socket Sock
@@ -31,6 +35,18 @@ namespace NetworksLab3Server.Classes
         {
             get { return socketNumber; }
             set { socketNumber = value; }
+        }
+
+        /// <summary>
+        /// Non-Default constructor. 
+        /// </summary>
+        /// <param name="textBox">
+        /// Takes a RichTextBox to allow for printing
+        /// to the form during real-time
+        /// </param>
+        public ServerRun(System.Windows.Forms.RichTextBox textBox)
+        {
+            formTextBox = textBox;
         }
         
         /// <summary>
@@ -154,33 +170,89 @@ namespace NetworksLab3Server.Classes
         {
             SocketState sockState = (SocketState)value;
             byte[] buffer = new byte[BUFFER_SIZE];
-            byte[] processedBuffer = new byte[BUFFER_SIZE];
+            byte[] byteSize = new byte[LENGTH_BITS];
+            byte[] choppedBuffer = null;
+            int bytesRead = 0;
+            short msgSize = 0;
 
             while (true)
             {
-                int bytesRead = sockState.sock.Receive(buffer);
-
-                if (bytesRead > 0)
+                lock (receiveLock)
                 {
-                    // Truncate message so not to send too much data back.
-                    byte[] choppedBuffer = new byte[bytesRead];
-                    Array.Copy(buffer, choppedBuffer, bytesRead);
-
-                    // Process the incoming message and prepares it for response
-                    sockState.countNumber++;
-                    ResponseBuilder rb = new ResponseBuilder(System.Text.Encoding.ASCII.GetString(choppedBuffer));
-                    processedBuffer = rb.Response(sockState.countNumber, 
-                        sockState.stpWatch.ElapsedMilliseconds.ToString(), 
-                        sockState.sock.RemoteEndPoint.AddressFamily.ToString(), //ToString().Split(':')[0], 
-                        sockState.sock.Handle.ToString(), 
-                        localServerIP);
-
-                    lock (sockState)
+                    // get whole message from client before moving on
+                    do
                     {
-                        // Send message back to the client
-                        sockState.sock.Send(processedBuffer);
+                        bytesRead = sockState.sock.Receive(buffer);
+
+                        // if haven't received msg length, skip
+                        if (bytesRead > 2)
+                        {
+                            Array.Copy(buffer, byteSize, 2);
+                            
+                            // Swap to proper endian for machine
+                                // Don't foget to optimize this back to try to save time!
+                            //if (!BitConverter.IsLittleEndian)
+                            //{
+                            //    Array.Reverse(byteSize);
+                            //}
+                            short convertedValue = BitConverter.ToInt16(byteSize, 0);
+                            IPAddress.NetworkToHostOrder(convertedValue);
+
+                            // Set msgSize to actual message size received so far
+                            msgSize = BitConverter.ToInt16(byteSize, 0);
+                        }
                     }
+                    while (msgSize < bytesRead);
+
+                    // Reset counter values for next thread
+                    bytesRead = 0;
+                    msgSize = 0;
+
+                    // Truncate message so not to send too much data back.
+                    choppedBuffer = new byte[bytesRead];
+                    Array.Copy(buffer, choppedBuffer, bytesRead);
                 }
+
+                // spawn a new sender thread to handle sending messages
+                Thread senderThread = new Thread(delegate()
+                {
+                    SendFunction(choppedBuffer, sockState);
+                });
+                senderThread.Start();
+
+            }
+        }
+
+        /// <summary>
+        /// processes the received message and carries out logic
+        /// to resend the response back to the client
+        /// </summary>
+        /// <param name="choppedBuffer">
+        /// The received buffer chopped down to
+        /// the size of actual bytes received instead of full
+        /// 256 size array
+        /// </param>
+        /// <param name="sockState">
+        /// SocketState class object containing the
+        /// values that are passed around for the message
+        /// </param>
+        private void SendFunction(byte[] choppedBuffer, SocketState sockState)
+        {
+            byte[] processedBuffer = new byte[BUFFER_SIZE];
+
+            // Process the incoming message and prepares it for response
+            sockState.countNumber++;
+            ResponseBuilder rb = new ResponseBuilder(System.Text.Encoding.ASCII.GetString(choppedBuffer));
+            processedBuffer = rb.Response(sockState.countNumber,
+                sockState.stpWatch.ElapsedMilliseconds.ToString(),
+                sockState.sock.RemoteEndPoint.AddressFamily.ToString(),
+                sockState.sock.Handle.ToString(),
+                localServerIP);
+
+            lock (sendLock)
+            {
+                // Send message back to the client
+                sockState.sock.Send(processedBuffer);
             }
         }
     }
