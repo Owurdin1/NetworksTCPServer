@@ -11,7 +11,7 @@ namespace NetworksLab3Server.Classes
     class ServerRun
     {
         // class global Constant variables
-        private const int WIRELESS_NIC_INDEX = 3; //1; //2;
+        private const int WIRELESS_NIC_INDEX = 4; //3; //1; //2;
         private const int PORT = 2605;
         private const int BUFFER_SIZE = 256;
         private const int LENGTH_BITS = 2;
@@ -191,12 +191,12 @@ namespace NetworksLab3Server.Classes
                             
                             // Swap to proper endian for machine
                                 // Don't foget to optimize this back to try to save time!
-                            //if (!BitConverter.IsLittleEndian)
-                            //{
-                            //    Array.Reverse(byteSize);
-                            //}
+                            if (BitConverter.IsLittleEndian)
+                            {
+                                Array.Reverse(byteSize);
+                            }
                             short convertedValue = BitConverter.ToInt16(byteSize, 0);
-                            IPAddress.NetworkToHostOrder(convertedValue);
+                            //IPAddress.NetworkToHostOrder(convertedValue);
 
                             // Set msgSize to actual message size received so far
                             msgSize = BitConverter.ToInt16(byteSize, 0);
@@ -204,13 +204,13 @@ namespace NetworksLab3Server.Classes
                     }
                     while (msgSize < bytesRead);
 
-                    // Reset counter values for next thread
-                    bytesRead = 0;
-                    msgSize = 0;
-
                     // Truncate message so not to send too much data back.
                     choppedBuffer = new byte[bytesRead];
                     Array.Copy(buffer, choppedBuffer, bytesRead);
+                    
+                    // Reset counter values for next thread
+                    bytesRead = 0;
+                    msgSize = 0;
                 }
 
                 // spawn a new sender thread to handle sending messages
