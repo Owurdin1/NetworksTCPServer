@@ -26,7 +26,7 @@ namespace NetworksLab3Server.Classes
 
             if (msgArray.Length < 14)
             {
-                System.Windows.Forms.MessageBox.Show("ERROR: Message sent from client is invalid");
+                //System.Windows.Forms.MessageBox.Show("ERROR: Message sent from client is invalid");
             }
         }
 

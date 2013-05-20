@@ -14,7 +14,9 @@ namespace NetworksLab3Server.Classes
         private const int WIRELESS_NIC_INDEX = 4; //3; //1; //2;
         private const int PORT = 2605;
         private const int BUFFER_SIZE = 256;
+        private const int MAX_MSG_SIZE = 256;
         private const int LENGTH_BITS = 2;
+        private const int MAX_MESSAGES = 100;
 
         // class private global variables
         private Socket sock = null;
@@ -23,8 +25,11 @@ namespace NetworksLab3Server.Classes
         private string localServerIP = string.Empty;
         private Object receiveLock = new Object();
         private Object sendLock = new Object();
+        private Object messageLock = new Object();
         private System.Windows.Forms.RichTextBox formTextBox = null;
+        private bool keepReading = true;
 
+        #region ClassProperties
         // class properties
         public Socket Sock
         {
@@ -36,6 +41,12 @@ namespace NetworksLab3Server.Classes
             get { return socketNumber; }
             set { socketNumber = value; }
         }
+        public bool KeepReading
+        {
+            get { return keepReading; }
+            set { keepReading = value; }
+        }
+        #endregion
 
         /// <summary>
         /// Non-Default constructor. 
@@ -47,6 +58,7 @@ namespace NetworksLab3Server.Classes
         public ServerRun(System.Windows.Forms.RichTextBox textBox)
         {
             formTextBox = textBox;
+            keepReading = true;
         }
         
         /// <summary>
@@ -63,20 +75,6 @@ namespace NetworksLab3Server.Classes
             acceptThread.IsBackground = true;
             acceptThread.Start();
 
-            #region getIPandPrint
-            //foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces()) 
-            //{ 
-            //    //Console.WriteLine(nic.Name); 
-            //    results += nic.Name;
-                
-            //    foreach (UnicastIPAddressInformation addrInfo in nic.GetIPProperties().UnicastAddresses)
-            //        { 
-            //            //Console.WriteLine("\t" + addrInfo.Address); 
-            //            results += "\t" + addrInfo.Address;
-            //        } 
-            //}
-            #endregion
-
             // return value for testing purposes
             return results;
         }
@@ -88,19 +86,34 @@ namespace NetworksLab3Server.Classes
         /// </summary>
         private void AcceptConnections()
         {
-            while (true)
+            Socket socket = null;
+
+            do
             {
                 // Accepts a connection on socket
-                Socket socket = sock.Accept();
+                try
+                {
+                    socket = sock.Accept();
+                }
+                catch (Exception)
+                {
+
+                }
+
                 SocketState sockState = new SocketState();
                 sockState.sock = socket;
                 sockState.stpWatch.Start();
 
                 // Spawns thread and starts ConnectionHandler function
-                sockState.thread = new Thread(ConnectionHandler);
+                sockState.thread = new Thread(delegate()
+                    {
+                        ConnectionHandler(sockState);
+                    });
                 sockState.thread.IsBackground = true;
-                sockState.thread.Start(sockState);
+                sockState.thread.Start();
+                //sockState.thread.Start(sockState);
             }
+            while (socket.Connected);
         }
 
         /// <summary>
@@ -116,14 +129,6 @@ namespace NetworksLab3Server.Classes
         {
             // Test string for passing values
             string results = String.Empty;
-
-            #region ipAlternate
-            //NetworkInterface[] nicArray = NetworkInterface.GetAllNetworkInterfaces();
-            //NetworkInterface nic = nicArray[WIRELESS_NIC_INDEX];
-            //UnicastIPAddressInformationCollection nicAddrCollection = nic.GetIPProperties().UnicastAddresses;
-            //UnicastIPAddressInformation nicAddr = nicAddrCollection[WIRELESS_NIC_INDEX];
-            //results = nicAddr.Address.ToString();
-#endregion
 
             // Get local machine information
             IPHostEntry localIP = Dns.GetHostEntry(Dns.GetHostName());
@@ -150,8 +155,11 @@ namespace NetworksLab3Server.Classes
         /// </returns>
         public string CloseServer()
         {
+            keepReading = false;
+
             string results = String.Empty;
 
+            Thread.Sleep(2000);
             sock.Close(socketNumber);
 
             results = "Socket number: " + socketNumber.ToString() + " has been closed!";
@@ -166,59 +174,112 @@ namespace NetworksLab3Server.Classes
         /// Takes a SocketState object that has a socket and thread 
         /// assigned to it.
         /// </param>
-        public void ConnectionHandler(object value)
+        public void ConnectionHandler(SocketState sockState)
         {
-            SocketState sockState = (SocketState)value;
+            // Incoming buffer byte array
             byte[] buffer = new byte[BUFFER_SIZE];
-            byte[] byteSize = new byte[LENGTH_BITS];
-            byte[] choppedBuffer = null;
-            int bytesRead = 0;
-            short msgSize = 0;
 
-            while (true)
+            // Message length byte array, stripped out of buffer
+            byte[] byteSize = new byte[LENGTH_BITS];
+
+            // bytes received last read
+            int bytesRead = 0;
+
+            int messageCount = 0;
+
+            while (messageCount < MAX_MESSAGES)
             {
+                // Current message receive
+                byte[] messageBuffer = null;
+                int offSet = 0;
+                int size = 0;
+
                 lock (receiveLock)
                 {
-                    // get whole message from client before moving on
-                    do
-                    {
-                        bytesRead = sockState.sock.Receive(buffer);
-
-                        // if haven't received msg length, skip
-                        if (bytesRead > 2)
-                        {
-                            Array.Copy(buffer, byteSize, 2);
-                            
-                            // Swap to proper endian for machine
-                                // Don't foget to optimize this back to try to save time!
-                            if (BitConverter.IsLittleEndian)
-                            {
-                                Array.Reverse(byteSize);
-                            }
-                            short convertedValue = BitConverter.ToInt16(byteSize, 0);
-                            //IPAddress.NetworkToHostOrder(convertedValue);
-
-                            // Set msgSize to actual message size received so far
-                            msgSize = BitConverter.ToInt16(byteSize, 0);
-                        }
-                    }
-                    while (msgSize < bytesRead);
-
-                    // Truncate message so not to send too much data back.
-                    choppedBuffer = new byte[bytesRead];
-                    Array.Copy(buffer, choppedBuffer, bytesRead);
-                    
-                    // Reset counter values for next thread
-                    bytesRead = 0;
-                    msgSize = 0;
+                    bytesRead = sockState.sock.Receive(buffer, offSet, LENGTH_BITS, SocketFlags.None);
                 }
 
-                // spawn a new sender thread to handle sending messages
-                Thread senderThread = new Thread(delegate()
+                // Get the size values out of current message
+                Array.Copy(buffer, offSet, byteSize, 0, LENGTH_BITS);
+
+                // Reverse the bits if they aren't in proper order for proc
+                if (BitConverter.IsLittleEndian)
                 {
-                    SendFunction(choppedBuffer, sockState);
-                });
+                    Array.Reverse(byteSize);
+                }
+
+                // Set the size variable
+                size = BitConverter.ToInt16(byteSize, 0);
+
+                // Set offSet variable
+                offSet += LENGTH_BITS;
+
+                lock (messageLock)
+                {
+                    // Read next message out of buffer
+                    bytesRead = sockState.sock.Receive(buffer, offSet, size, SocketFlags.None);
+                }
+
+                // Set messageBuffer to new byte[] with size index
+                messageBuffer = new byte[size];
+
+                // Copy message to messageBuffer
+                Array.Copy(buffer, offSet, messageBuffer, 0, size);
+
+                // Send message off, exit do while
+                Thread senderThread = new Thread(delegate()
+                    {
+                        SendFunction(messageBuffer, sockState);
+                    });
                 senderThread.Start();
+
+                // Increment the message count
+                messageCount++;
+
+                # region NonMessageReceive
+                //lock (receiveLock)
+                //{
+                    //// get whole message from client before moving on
+                    //do
+                    //{
+                    //    bytesRead = sockState.sock.Receive(buffer);
+
+                    //    // if haven't received msg length, skip
+                    //    if (bytesRead != 0)
+                    //    {
+                    //        Array.Copy(buffer, byteSize, 2);
+                            
+                    //        // Swap to proper endian for machine
+                    //            // Don't foget to optimize this back to try to save time!
+                    //        if (BitConverter.IsLittleEndian)
+                    //        {
+                    //            Array.Reverse(byteSize);
+                    //        }
+                    //        short convertedValue = BitConverter.ToInt16(byteSize, 0);
+                    //        //IPAddress.NetworkToHostOrder(convertedValue);
+
+                    //        // Set msgSize to actual message size received so far
+                    //        msgSize = BitConverter.ToInt16(byteSize, 0);
+                    //    }
+                    //}
+                    //while (msgSize < buffer.Length);
+
+                    //// Truncate message so not to send too much data back.
+                    //choppedBuffer = new byte[bytesRead];
+                    //Array.Copy(buffer, choppedBuffer, bytesRead);
+                    
+                    //// Reset counter values for next thread
+                    //bytesRead = 0;
+                    //msgSize = 0;
+                //}
+
+                //// spawn a new sender thread to handle sending messages
+                //Thread senderThread = new Thread(delegate()
+                //{
+                //    SendFunction(choppedBuffer, sockState);
+                //});
+                //senderThread.Start();
+                #endregion
 
             }
         }
@@ -238,7 +299,7 @@ namespace NetworksLab3Server.Classes
         /// </param>
         private void SendFunction(byte[] choppedBuffer, SocketState sockState)
         {
-            byte[] processedBuffer = new byte[BUFFER_SIZE];
+            byte[] processedBuffer = new byte[MAX_MSG_SIZE];
 
             // Process the incoming message and prepares it for response
             sockState.countNumber++;
