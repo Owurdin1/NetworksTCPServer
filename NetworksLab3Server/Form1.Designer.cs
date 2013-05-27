@@ -33,6 +33,7 @@
             this.testLabel2 = new System.Windows.Forms.Label();
             this.finishButton = new System.Windows.Forms.Button();
             this.richTextBox = new System.Windows.Forms.RichTextBox();
+            this.asyncStartButton = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // startButton
@@ -57,7 +58,7 @@
             // testLabel2
             // 
             this.testLabel2.AutoSize = true;
-            this.testLabel2.Location = new System.Drawing.Point(13, 134);
+            this.testLabel2.Location = new System.Drawing.Point(13, 133);
             this.testLabel2.Name = "testLabel2";
             this.testLabel2.Size = new System.Drawing.Size(60, 13);
             this.testLabel2.TabIndex = 2;
@@ -81,11 +82,22 @@
             this.richTextBox.TabIndex = 4;
             this.richTextBox.Text = "";
             // 
+            // asyncStartButton
+            // 
+            this.asyncStartButton.Location = new System.Drawing.Point(16, 81);
+            this.asyncStartButton.Name = "asyncStartButton";
+            this.asyncStartButton.Size = new System.Drawing.Size(75, 23);
+            this.asyncStartButton.TabIndex = 0;
+            this.asyncStartButton.Text = "AsyncStart";
+            this.asyncStartButton.UseVisualStyleBackColor = true;
+            this.asyncStartButton.Click += new System.EventHandler(this.asyncStartButton_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(284, 262);
+            this.Controls.Add(this.asyncStartButton);
             this.Controls.Add(this.richTextBox);
             this.Controls.Add(this.finishButton);
             this.Controls.Add(this.testLabel2);
@@ -105,6 +117,7 @@
         private System.Windows.Forms.Label testLabel2;
         private System.Windows.Forms.Button finishButton;
         private System.Windows.Forms.RichTextBox richTextBox;
+        private System.Windows.Forms.Button asyncStartButton;
     }
 }
 

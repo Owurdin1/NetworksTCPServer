@@ -53,5 +53,14 @@ namespace NetworksLab3Server
             // TODO: kill processes then close window
             //Form1.ActiveForm.Close();
         }
+
+        private void asyncStartButton_Click(object sender, EventArgs e)
+        {
+            Classes.AsyncServerRun ar = new Classes.AsyncServerRun(richTextBox);
+
+            ar.Start();
+
+            richTextBox.Text += "\nFinished doing something";
+        }
     }
 }

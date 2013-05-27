@@ -11,12 +11,12 @@ namespace NetworksLab3Server.Classes
     class ServerRun
     {
         // class global Constant variables
-        private const int WIRELESS_NIC_INDEX = 4; //3; //1; //2;
+        private const int WIRELESS_NIC_INDEX = 3; //5; //4; //3; //1; //2;
         private const int PORT = 2605;
         private const int BUFFER_SIZE = 256;
         private const int MAX_MSG_SIZE = 256;
         private const int LENGTH_BITS = 2;
-        private const int MAX_MESSAGES = 100;
+        private const int MAX_MESSAGES = 5000;
 
         // class private global variables
         private Socket sock = null;
@@ -188,6 +188,7 @@ namespace NetworksLab3Server.Classes
             int messageCount = 0;
 
             while (messageCount < MAX_MESSAGES)
+            //while (true)
             {
                 // Current message receive
                 byte[] messageBuffer = null;
@@ -282,6 +283,7 @@ namespace NetworksLab3Server.Classes
                 #endregion
 
             }
+            sockState.sock.Close();
         }
 
         /// <summary>
@@ -299,22 +301,31 @@ namespace NetworksLab3Server.Classes
         /// </param>
         private void SendFunction(byte[] choppedBuffer, SocketState sockState)
         {
-            byte[] processedBuffer = new byte[MAX_MSG_SIZE];
+            //byte[] processedBuffer = new byte[MAX_MSG_SIZE];
+            byte[] processedBuffer;
 
             // Process the incoming message and prepares it for response
             sockState.countNumber++;
-            ResponseBuilder rb = new ResponseBuilder(System.Text.Encoding.ASCII.GetString(choppedBuffer));
-            processedBuffer = rb.Response(sockState.countNumber,
-                sockState.stpWatch.ElapsedMilliseconds.ToString(),
-                sockState.sock.RemoteEndPoint.AddressFamily.ToString(),
-                sockState.sock.Handle.ToString(),
-                localServerIP);
-
-            lock (sendLock)
+            try
             {
-                // Send message back to the client
-                sockState.sock.Send(processedBuffer);
+                ResponseBuilder rb = new ResponseBuilder(System.Text.Encoding.ASCII.GetString(choppedBuffer));
+                processedBuffer = rb.Response(sockState.countNumber,
+                    sockState.stpWatch.ElapsedMilliseconds.ToString(),
+                    sockState.sock.RemoteEndPoint.AddressFamily.ToString(),
+                    sockState.sock.Handle.ToString(),
+                    localServerIP);
+
+                lock (sendLock)
+                {
+                    // Send message back to the client
+                    sockState.sock.Send(processedBuffer);
+                }
             }
+            catch (Exception e)
+            {
+                e.ToString();
+            }
+
         }
     }
 }

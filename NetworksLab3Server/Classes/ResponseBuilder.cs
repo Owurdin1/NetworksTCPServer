@@ -53,13 +53,62 @@ namespace NetworksLab3Server.Classes
             msgArray[11] = "OW " + count.ToString();
 
             string message = String.Empty;
-            foreach (string s in msgArray)
-            {
-                if (!s.Equals(""))
-                {
-                    message += s + "|";
-                }
-            }
+            //foreach (string s in msgArray)
+            //{
+            //    if (!s.Equals(""))
+            //    {
+            //        message += s + "|";
+            //    }
+            //}
+
+            message = string.Join("|", msgArray);
+
+            msgByte = System.Text.Encoding.ASCII.GetBytes(message);
+
+            //msgByte = SetMsgLength(msgByte);
+            //return msgByte;
+            return SetMsgLength(msgByte);
+        }
+
+        /// <summary>
+        /// Builds response message and prepares byte array
+        /// </summary>
+        /// <param name="count">
+        /// integer value that is a unique value to append to messages
+        /// </param>
+        /// <returns>
+        /// formatted byte array
+        /// </returns>
+        public byte[] ResponseAsync(SocketState sockState, string serverIPAddress)
+        {
+            byte[] msgByte = null;
+
+            msgArray[0] = "RSP";
+            msgArray[1] = sockState.stpWatch.ElapsedMilliseconds.ToString();
+            msgArray[6] = sockState.sock.RemoteEndPoint.AddressFamily.ToString();
+            msgArray[7] = "2605";
+            msgArray[8] = sockState.sock.Handle.ToString();
+            msgArray[9] = serverIPAddress;
+            msgArray[11] = "OW " + sockState.countNumber.ToString();
+
+            //msgArray[0] = "RSP";
+            //msgArray[1] = msTimeStamp;
+            //msgArray[6] = foreignHostIP;
+            //msgArray[7] = "2605";
+            //msgArray[8] = serverSocketNumber;
+            //msgArray[9] = serverIPAddress;
+            //msgArray[11] = "OW " + count.ToString();
+
+            string message = String.Empty;
+            //foreach (string s in msgArray)
+            //{
+            //    if (!s.Equals(""))
+            //    {
+            //        message += s + "|";
+            //    }
+            //}
+
+            message = string.Join("|", msgArray);
 
             msgByte = System.Text.Encoding.ASCII.GetBytes(message);
 

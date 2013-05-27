@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Classes\AsyncServerRun.cs" />
     <Compile Include="Classes\ResponseBuilder.cs" />
     <Compile Include="Classes\ServerRun.cs" />
     <Compile Include="Classes\SocketState.cs" />
