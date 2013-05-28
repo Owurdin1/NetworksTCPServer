@@ -14,13 +14,13 @@ namespace NetworksLab3Server.Classes
         private const int WIRELESS_NIC_INDEX = 3; //1; //2;
         private const int PORT = 2605;
         private const int BUFFER_SIZE = 256;
-        private const int MAX_MSG_SIZE = 256;
+        //private const int MAX_MSG_SIZE = 256;
         private const int LENGTH_BITS = 2;
 
         // class private global variables
         private Socket sock = null;
         //private int socketNumber;
-        private int responseNumber = 0;
+        //private int responseNumber = 0;
         //private Thread acceptThread;
         private string localServerIP = string.Empty;
         private System.Windows.Forms.RichTextBox formTextBox = null;
@@ -116,6 +116,41 @@ namespace NetworksLab3Server.Classes
         private void ReceiveCallBack(IAsyncResult result)
         {
             SocketState sockState = (SocketState)result.AsyncState;
+
+            int bytesRead = sockState.sock.EndReceive(result);
+
+            if (bytesRead >= LENGTH_BITS)
+            {
+                byte[] byteSize = new byte[LENGTH_BITS];
+                Array.Copy(sockState.buffer, byteSize, LENGTH_BITS);
+
+                if (BitConverter.IsLittleEndian)
+                {
+                    Array.Reverse(byteSize);
+                }
+
+                sockState.size = BitConverter.ToInt16(byteSize, 0);
+
+                // make sure full message is in the buffer
+                if (sockState.buffer.Length >= sockState.size)
+                {
+                    sockState.processedBuffer = new byte[sockState.size];
+                    Array.Copy(sockState.buffer, LENGTH_BITS, sockState.processedBuffer, 0, sockState.size);
+                    SendReply(sockState);
+                }
+                else
+                {
+                    // full message is not in the buffer.
+                    sockState.sock.BeginReceive(sockState.buffer, sockState.offset, sockState.size,
+                        SocketFlags.None, new AsyncCallback(ReceiveCallBack), result.AsyncState);
+
+                }
+            }
+            else
+            {
+                KillConnection(sockState);
+            }
+
             //==================================================================================
 
             //int bytesRead = sockState.sock.EndReceive(result);
@@ -163,122 +198,129 @@ namespace NetworksLab3Server.Classes
             //}
         }
 
-        /// <summary>
-        /// Converts the first 2 bits read into
-        /// short and sets the message size to be
-        /// pulled off of the socket. Otherwise
-        /// the full size bits haven't been read so it will
-        /// send back and read until full size has been
-        /// read off of the socket. (Shouldn't have to 
-        /// handle that with the type of read that is being done,
-        /// but easier than tracking down error).
-        /// </summary>
-        /// <param name="result">
-        /// IAsyncResult cast as a SocketState
-        /// </param>
-        private void ReadSize(IAsyncResult result)
-        {
-            //SocketState sockState = (SocketState)result;
-            SocketState sockState = (SocketState)result.AsyncState;
+        ///// <summary>
+        ///// Converts the first 2 bits read into
+        ///// short and sets the message size to be
+        ///// pulled off of the socket. Otherwise
+        ///// the full size bits haven't been read so it will
+        ///// send back and read until full size has been
+        ///// read off of the socket. (Shouldn't have to 
+        ///// handle that with the type of read that is being done,
+        ///// but easier than tracking down error).
+        ///// </summary>
+        ///// <param name="result">
+        ///// IAsyncResult cast as a SocketState
+        ///// </param>
+        //private void ReadSize(IAsyncResult result)
+        //{
+        //    //SocketState sockState = (SocketState)result;
+        //    SocketState sockState = (SocketState)result.AsyncState;
 
-            int bytesRead = sockState.sock.EndReceive(result);
+        //    int bytesRead = sockState.sock.EndReceive(result);
 
-            //switch (bytesRead)
-            //{
-            //    case 0:
-            //    {
-            //        // full 2 bits length hasn't been received yet
-            //        sockState.sock.BeginReceive(sockState.buffer, sockState.offset,
-            //            sockState.size, SocketFlags.None, new AsyncCallback(ReceiveCallBack), result.AsyncState);
-            //        break;
-            //    }
-            //    case 1:
-            //    {
-            //        // 1 bit has been read off the buffer, need to get the other one
-            //        sockState.offset++;
-            //        sockState.sock.BeginReceive(sockState.buffer, sockState.offset,
-            //            sockState.size, SocketFlags.None, new AsyncCallback(ReceiveCallBack), result.AsyncState);
-            //        break;
-            //    }
-            //    case 2:
-            //    {
-                    // Caclulate the size of the message coming in
-                    // Varaibles for size calculation
-                    byte[] byteSize = new byte[LENGTH_BITS];
+        //    //switch (bytesRead)
+        //    //{
+        //    //    case 0:
+        //    //    {
+        //    //        // full 2 bits length hasn't been received yet
+        //    //        sockState.sock.BeginReceive(sockState.buffer, sockState.offset,
+        //    //            sockState.size, SocketFlags.None, new AsyncCallback(ReceiveCallBack), result.AsyncState);
+        //    //        break;
+        //    //    }
+        //    //    case 1:
+        //    //    {
+        //    //        // 1 bit has been read off the buffer, need to get the other one
+        //    //        sockState.offset++;
+        //    //        sockState.sock.BeginReceive(sockState.buffer, sockState.offset,
+        //    //            sockState.size, SocketFlags.None, new AsyncCallback(ReceiveCallBack), result.AsyncState);
+        //    //        break;
+        //    //    }
+        //    //    case 2:
+        //    //    {
+        //            // Caclulate the size of the message coming in
+        //            // Varaibles for size calculation
+        //            byte[] byteSize = new byte[LENGTH_BITS];
 
-                    // Get the size values out of current message
-                    Array.Copy(sockState.buffer, sockState.offset, byteSize, 0, LENGTH_BITS);
+        //            // Get the size values out of current message
+        //            Array.Copy(sockState.buffer, sockState.offset, byteSize, 0, LENGTH_BITS);
 
-                    // Reverse the bits if they aren't in proper order for proc
-                    if (BitConverter.IsLittleEndian)
-                    {
-                        Array.Reverse(byteSize);
-                    }
+        //            // Reverse the bits if they aren't in proper order for proc
+        //            if (BitConverter.IsLittleEndian)
+        //            {
+        //                Array.Reverse(byteSize);
+        //            }
 
-                    // Set the size variable
-                    sockState.size = BitConverter.ToInt16(byteSize, 0);
+        //            // Set the size variable
+        //            sockState.size = BitConverter.ToInt16(byteSize, 0);
 
-                    // Set the offset to begin read after size bytes
-                    sockState.offset = LENGTH_BITS;
+        //            // Set the offset to begin read after size bytes
+        //            sockState.offset = LENGTH_BITS;
 
-                    // send back to call back to receive the message
-                    sockState.sock.BeginReceive(sockState.buffer, sockState.offset, sockState.size,
-                        SocketFlags.None, new AsyncCallback(ReceiveCallBack), result.AsyncState);
-                //    break;
-                //}
-            //}
-        }
+        //            // send back to call back to receive the message
+        //            sockState.sock.BeginReceive(sockState.buffer, sockState.offset, sockState.size,
+        //                SocketFlags.None, new AsyncCallback(ReceiveCallBack), result.AsyncState);
+        //        //    break;
+        //        //}
+        //    //}
+        //}
 
-        /// <summary>
-        /// Reads the message from the socket.
-        /// If the full message hasn't been receieved it
-        /// will send back to the ReceiveCallBack function
-        /// and wait until the whole message has been yanked out of the
-        /// socket. If whole message hasn't been recieved the SocketState
-        /// offset value will be updated to the latest position in the
-        /// sockState object.
-        /// </summary>
-        /// <param name="result"></param>
-        private void ReadMessage(IAsyncResult result)
-        {
-            //SocketState sockState = (SocketState)result;
-            SocketState sockState = (SocketState)result.AsyncState;
+        ///// <summary>
+        ///// Reads the message from the socket.
+        ///// If the full message hasn't been receieved it
+        ///// will send back to the ReceiveCallBack function
+        ///// and wait until the whole message has been yanked out of the
+        ///// socket. If whole message hasn't been recieved the SocketState
+        ///// offset value will be updated to the latest position in the
+        ///// sockState object.
+        ///// </summary>
+        ///// <param name="result"></param>
+        //private void ReadMessage(IAsyncResult result)
+        //{
+        //    //SocketState sockState = (SocketState)result;
+        //    SocketState sockState = (SocketState)result.AsyncState;
 
-            int bytesRead = sockState.sock.EndReceive(result);
+        //    int bytesRead = sockState.sock.EndReceive(result);
 
-            if (bytesRead == sockState.size)
-            {
-                responseNumber++;
-                sockState.countNumber = responseNumber;
-                SendReply(sockState);
-            }
-            else
-            {
-                // whole message not received yet
-                sockState.sock.BeginReceive(sockState.buffer, sockState.offset,
-                    sockState.size, SocketFlags.None, new AsyncCallback(ReceiveCallBack), result.AsyncState);
-            }
-        }
+        //    if (bytesRead == sockState.size)
+        //    {
+        //        responseNumber++;
+        //        sockState.countNumber = responseNumber;
+        //        SendReply(sockState);
+        //    }
+        //    else
+        //    {
+        //        // whole message not received yet
+        //        sockState.sock.BeginReceive(sockState.buffer, sockState.offset,
+        //            sockState.size, SocketFlags.None, new AsyncCallback(ReceiveCallBack), result.AsyncState);
+        //    }
+        //}
 
         /// <summary>
         /// build resposne and send it back call the send 
         /// call back function to complete the send.
+        /// The function assumes that the SocketState.proccesedBuffer
+        /// contains the whole message to be processed and sent back
+        /// to the client.
         /// </summary>
-        /// <param name="sockState"></param>
+        /// <param name="sockState">
+        /// SocketState object.
+        /// </param>
         private void SendReply(SocketState sockState)
         {
+            // TODO: Format message then begin sending through SendCallBack.
+
             // Must build response then send the message through to the client.
-            byte[] choppedBuffer = new byte[sockState.size];
+            //byte[] choppedBuffer = new byte[sockState.size];
             //byte[] processedBuffer;
-            Array.Copy(sockState.buffer, sockState.offset, choppedBuffer, 0, sockState.size);
+            //Array.Copy(sockState.buffer, sockState.offset, choppedBuffer, 0, sockState.size);
 
-            ResponseBuilder rb = new ResponseBuilder(Encoding.ASCII.GetString(choppedBuffer));
-            sockState.processedBuffer = rb.ResponseAsync(sockState, localServerIP);
+            //ResponseBuilder rb = new ResponseBuilder(Encoding.ASCII.GetString(choppedBuffer));
+            //sockState.processedBuffer = rb.ResponseAsync(sockState, localServerIP);
 
-            sockState.processedSize = sockState.processedBuffer.Length;
+            //sockState.processedSize = sockState.processedBuffer.Length;
 
-            sockState.sock.BeginSend(sockState.processedBuffer, 0, sockState.processedSize, 
-                SocketFlags.None, new AsyncCallback(SendCallBack), sockState);
+            //sockState.sock.BeginSend(sockState.processedBuffer, 0, sockState.processedSize, 
+            //    SocketFlags.None, new AsyncCallback(SendCallBack), sockState);
         }
 
         /// <summary>
