@@ -119,37 +119,49 @@ namespace NetworksLab3Server.Classes
 
             int bytesRead = sockState.sock.EndReceive(result);
 
-            if (bytesRead >= LENGTH_BITS)
+            if (bytesRead > 0)
             {
-                byte[] byteSize = new byte[LENGTH_BITS];
-                Array.Copy(sockState.buffer, byteSize, LENGTH_BITS);
 
-                if (BitConverter.IsLittleEndian)
-                {
-                    Array.Reverse(byteSize);
-                }
-
-                sockState.size = BitConverter.ToInt16(byteSize, 0);
-
-                // make sure full message is in the buffer
-                if (sockState.buffer.Length >= sockState.size)
-                {
-                    sockState.processedBuffer = new byte[sockState.size];
-                    Array.Copy(sockState.buffer, LENGTH_BITS, sockState.processedBuffer, 0, sockState.size);
-                    SendReply(sockState);
-                }
-                else
-                {
-                    // full message is not in the buffer.
-                    sockState.sock.BeginReceive(sockState.buffer, sockState.offset, sockState.size,
-                        SocketFlags.None, new AsyncCallback(ReceiveCallBack), result.AsyncState);
-
-                }
             }
             else
             {
+                // Nothing coming in on the socket kill connection
                 KillConnection(sockState);
             }
+
+            //==================================================================================
+            //if (bytesRead >= LENGTH_BITS)
+            //{
+            //    byte[] byteSize = new byte[LENGTH_BITS];
+            //    //Array.Copy(sockState.buffer, byteSize, LENGTH_BITS);
+            //    Array.Copy(sockState.buffer, sockState.offset, byteSize, 0, LENGTH_BITS);
+
+            //    if (BitConverter.IsLittleEndian)
+            //    {
+            //        Array.Reverse(byteSize);
+            //    }
+
+            //    sockState.size = BitConverter.ToInt16(byteSize, 0);
+
+            //    // make sure full message is in the buffer
+            //    if (sockState.buffer.Length >= sockState.size)
+            //    {
+            //        sockState.processedBuffer = new byte[sockState.size];
+            //        Array.Copy(sockState.buffer, LENGTH_BITS, sockState.processedBuffer, 0, sockState.size);
+            //        SendReply(sockState);
+            //    }
+            //    else
+            //    {
+            //        // full message is not in the buffer.
+            //        sockState.sock.BeginReceive(sockState.buffer, sockState.offset, sockState.size,
+            //            SocketFlags.None, new AsyncCallback(ReceiveCallBack), result.AsyncState);
+
+            //    }
+            //}
+            //else
+            //{
+            //    KillConnection(sockState);
+            //}
 
             //==================================================================================
 
