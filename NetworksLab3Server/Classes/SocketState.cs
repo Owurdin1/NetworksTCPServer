@@ -17,7 +17,7 @@ namespace NetworksLab3Server.Classes
         public Stopwatch stpWatch;
         public int countNumber = 0;
         public byte[] buffer;
-        public byte[] processedBuffer;
+        //public byte[] processedBuffer;
         public int offset = 0;
         public int size = 0;
         public int processedSize = 0;

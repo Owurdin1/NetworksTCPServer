@@ -11,12 +11,12 @@ namespace NetworksLab3Server.Classes
     class ServerRun
     {
         // class global Constant variables
-        private const int WIRELESS_NIC_INDEX = 3; //5; //4; //3; //1; //2;
+        private const int WIRELESS_NIC_INDEX = 4; //5; //3; //1; //2;
         private const int PORT = 2605;
         private const int BUFFER_SIZE = 256;
         private const int MAX_MSG_SIZE = 256;
         private const int LENGTH_BITS = 2;
-        private const int MAX_MESSAGES = 5000;
+        private const int MAX_MESSAGES = 10015;
 
         // class private global variables
         private Socket sock = null;
