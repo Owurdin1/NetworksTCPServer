@@ -11,7 +11,7 @@ namespace NetworksLab3Server.Classes
     class ServerRun
     {
         // class global Constant variables
-        private const int WIRELESS_NIC_INDEX = 4; //5; //3; //1; //2;
+        private const int WIRELESS_NIC_INDEX = 3;//2; //4; //0; //1; //2; //3;
         private const int PORT = 2605;
         private const int BUFFER_SIZE = 256;
         private const int MAX_MSG_SIZE = 256;
@@ -187,59 +187,63 @@ namespace NetworksLab3Server.Classes
 
             int messageCount = 0;
 
-            while (messageCount < MAX_MESSAGES)
-            //while (true)
+            try
             {
-                // Current message receive
-                byte[] messageBuffer = null;
-                int offSet = 0;
-                int size = 0;
 
-                lock (receiveLock)
+                while (messageCount < MAX_MESSAGES)
+                //while (true)
+                //while (sockState.sock.Connected)
                 {
-                    bytesRead = sockState.sock.Receive(buffer, offSet, LENGTH_BITS, SocketFlags.None);
-                }
+                    // Current message receive
+                    byte[] messageBuffer = null;
+                    int offSet = 0;
+                    int size = 0;
 
-                // Get the size values out of current message
-                Array.Copy(buffer, offSet, byteSize, 0, LENGTH_BITS);
-
-                // Reverse the bits if they aren't in proper order for proc
-                if (BitConverter.IsLittleEndian)
-                {
-                    Array.Reverse(byteSize);
-                }
-
-                // Set the size variable
-                size = BitConverter.ToInt16(byteSize, 0);
-
-                // Set offSet variable
-                offSet += LENGTH_BITS;
-
-                lock (messageLock)
-                {
-                    // Read next message out of buffer
-                    bytesRead = sockState.sock.Receive(buffer, offSet, size, SocketFlags.None);
-                }
-
-                // Set messageBuffer to new byte[] with size index
-                messageBuffer = new byte[size];
-
-                // Copy message to messageBuffer
-                Array.Copy(buffer, offSet, messageBuffer, 0, size);
-
-                // Send message off, exit do while
-                Thread senderThread = new Thread(delegate()
+                    lock (receiveLock)
                     {
-                        SendFunction(messageBuffer, sockState);
-                    });
-                senderThread.Start();
+                        bytesRead = sockState.sock.Receive(buffer, offSet, LENGTH_BITS, SocketFlags.None);
+                    }
 
-                // Increment the message count
-                messageCount++;
+                    // Get the size values out of current message
+                    Array.Copy(buffer, offSet, byteSize, 0, LENGTH_BITS);
 
-                # region NonMessageReceive
-                //lock (receiveLock)
-                //{
+                    // Reverse the bits if they aren't in proper order for proc
+                    if (BitConverter.IsLittleEndian)
+                    {
+                        Array.Reverse(byteSize);
+                    }
+
+                    // Set the size variable
+                    size = BitConverter.ToInt16(byteSize, 0);
+
+                    // Set offSet variable
+                    offSet += LENGTH_BITS;
+
+                    lock (messageLock)
+                    {
+                        // Read next message out of buffer
+                        bytesRead = sockState.sock.Receive(buffer, offSet, size, SocketFlags.None);
+                    }
+
+                    // Set messageBuffer to new byte[] with size index
+                    messageBuffer = new byte[size];
+
+                    // Copy message to messageBuffer
+                    Array.Copy(buffer, offSet, messageBuffer, 0, size);
+
+                    // Send message off, exit do while
+                    Thread senderThread = new Thread(delegate()
+                        {
+                            SendFunction(messageBuffer, sockState);
+                        });
+                    senderThread.Start();
+
+                    // Increment the message count
+                    messageCount++;
+
+                    # region NonMessageReceive
+                    //lock (receiveLock)
+                    //{
                     //// get whole message from client before moving on
                     //do
                     //{
@@ -249,7 +253,7 @@ namespace NetworksLab3Server.Classes
                     //    if (bytesRead != 0)
                     //    {
                     //        Array.Copy(buffer, byteSize, 2);
-                            
+
                     //        // Swap to proper endian for machine
                     //            // Don't foget to optimize this back to try to save time!
                     //        if (BitConverter.IsLittleEndian)
@@ -268,21 +272,27 @@ namespace NetworksLab3Server.Classes
                     //// Truncate message so not to send too much data back.
                     //choppedBuffer = new byte[bytesRead];
                     //Array.Copy(buffer, choppedBuffer, bytesRead);
-                    
+
                     //// Reset counter values for next thread
                     //bytesRead = 0;
                     //msgSize = 0;
-                //}
+                    //}
 
-                //// spawn a new sender thread to handle sending messages
-                //Thread senderThread = new Thread(delegate()
-                //{
-                //    SendFunction(choppedBuffer, sockState);
-                //});
-                //senderThread.Start();
-                #endregion
+                    //// spawn a new sender thread to handle sending messages
+                    //Thread senderThread = new Thread(delegate()
+                    //{
+                    //    SendFunction(choppedBuffer, sockState);
+                    //});
+                    //senderThread.Start();
+                    #endregion
 
+                }
             }
+            catch (Exception e)
+            {
+                e.Message.ToString();
+            }
+
             sockState.sock.Close();
         }
 
