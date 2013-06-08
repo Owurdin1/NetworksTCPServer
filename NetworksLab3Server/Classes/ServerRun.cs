@@ -88,7 +88,8 @@ namespace NetworksLab3Server.Classes
         {
             Socket socket = null;
 
-            do
+            //do
+            while (true)
             {
                 // Accepts a connection on socket
                 try
@@ -113,7 +114,7 @@ namespace NetworksLab3Server.Classes
                 sockState.thread.Start();
                 //sockState.thread.Start(sockState);
             }
-            while (socket.Connected);
+            //while (socket.Connected);
         }
 
         /// <summary>
@@ -190,9 +191,9 @@ namespace NetworksLab3Server.Classes
             try
             {
 
-                while (messageCount < MAX_MESSAGES)
+                //while (messageCount < MAX_MESSAGES)
                 //while (true)
-                //while (sockState.sock.Connected)
+                while (sockState.sock.Connected)
                 {
                     // Current message receive
                     byte[] messageBuffer = null;
@@ -294,6 +295,7 @@ namespace NetworksLab3Server.Classes
             }
 
             sockState.sock.Close();
+            //System.Windows.Forms.MessageBox.Show("Finished closed socket\r\n returned: " + sockState.countNumber + " Messages");
         }
 
         /// <summary>

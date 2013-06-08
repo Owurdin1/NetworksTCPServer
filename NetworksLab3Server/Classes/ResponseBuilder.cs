@@ -50,7 +50,7 @@ namespace NetworksLab3Server.Classes
             msgArray[7] = "2605";
             msgArray[8] = serverSocketNumber;
             msgArray[9] = serverIPAddress;
-            msgArray[11] = "OW " + count.ToString();
+            msgArray[11] = "OWServ " + count.ToString();
 
             string message = String.Empty;
             //foreach (string s in msgArray)
@@ -89,7 +89,7 @@ namespace NetworksLab3Server.Classes
             msgArray[7] = "2605";
             msgArray[8] = sockState.sock.Handle.ToString();
             msgArray[9] = serverIPAddress;
-            msgArray[11] = "OW " + sockState.countNumber.ToString();
+            msgArray[11] = "OWServ " + sockState.countNumber.ToString();
 
             //msgArray[0] = "RSP";
             //msgArray[1] = msTimeStamp;
